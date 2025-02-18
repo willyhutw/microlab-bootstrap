@@ -1,0 +1,2 @@
+resources/kubeadm-config.yml
+resources/letsencrypt-cluster-issuer.yml

@@ -1,0 +1,15 @@
+controller:
+  ingressClassResource:
+    name: nginx
+    enabled: true
+    default: false
+    controllerValue: k8s.io/ingress-nginx
+  ingressClass: nginx
+  scope:
+    enabled: false
+    namespaceSelector: "internal=yes"
+  replicaCount: 1
+  service:
+    annotations:
+      metallb.universe.tf/loadBalancerIPs: 192.168.13.91
+    externalTrafficPolicy: Local
