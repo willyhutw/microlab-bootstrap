@@ -32,8 +32,10 @@ main() {
   helm upgrade --install -n metallb-system metallb metallb/metallb --create-namespace --version 0.14.9 --wait
   kubectl apply -f ./resources/metallb-config.yml
 
-  # ingress-nginx
-  helm upgrade --install -n ingress-nginx ingress-nginx ingress-nginx/ingress-nginx --create-namespace -f ./helm-values/ingress-nginx-values.yml --version 4.12.0 --wait
+  # istio
+  helm upgeade --install -n istio-system istio-base istio/base --create-namespace --version 1.24.3 --wait
+  helm upgrade --install -n istio-system istiod istio/istiod --create-namespace -f ./helm-values/istiod.yml --version 1.24.3 --wait
+  helm upgrade --install -n istio-system istio-ingressgateway istio/gateway --create-namespace -f ./helm-values/istio-ingressgateway.yml --version 1.24.3 --wait
 
   # cilium-hubble
   helm upgrade --install -n kube-system cilium cilium/cilium --reuse-values -f ./helm-values/cilium-hubble.yml --version 1.16.6 --wait

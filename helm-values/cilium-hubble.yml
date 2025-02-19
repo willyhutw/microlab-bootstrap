@@ -1,3 +1,7 @@
+socketLB:
+  hostNamespaceOnly: true
+cni:
+  exclusive: false
 hubble:
   enabled: true
   relay:
@@ -5,14 +9,4 @@ hubble:
   ui:
     enabled: true
     ingress:
-      className: nginx
-      annotations:
-        cert-manager.io/cluster-issuer: letsencrypt-prod
-        nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
-      enabled: true
-      hosts:
-        - hubble.willyhu.tw
-      tls:
-        - hosts:
-            - hubble.willyhu.tw
-          secretName: hubble-willyhu-tw-tls
+      enabled: false
