@@ -22,11 +22,11 @@ main() {
   helm upgrade --install -n cert-manager cert-manager jetstack/cert-manager --create-namespace --set installCRDs=true --version 1.16.3 --wait
 
   # letsencrypt cluster-issuer
-  IFS=',' read -r VAR1 VAR2 <~/acme_access_keys.csv && export ACME_ACCESS_KEY_ID=$(echo "$VAR1" | xargs) ACME_SECRET_ACCESS_KEY=$(echo "$VAR2" | xargs)
-  kubectl -n cert-manager create secret generic iam-acme --from-literal=secret-access-key=$ACME_SECRET_ACCESS_KEY
+  export CLOUDFLARE_ACME_SECRET=$(cat ~/cloudflare_acme_token.txt)
+  kubectl -n cert-manager create secret generic cloudflare-api-token-secret --from-literal=api-token=$CLOUDFLARE_ACME_SECRET
   envsubst <./resources/letsencrypt-cluster-issuer.yml.tpl >./resources/letsencrypt-cluster-issuer.yml
   kubectl apply -f ./resources/letsencrypt-cluster-issuer.yml
-  unset ACME_ACCESS_KEY_ID ACME_SECRET_ACCESS_KEY
+  unset CLOUDFLARE_ACME_SECRET
 
   # metallb
   helm upgrade --install -n metallb-system metallb metallb/metallb --create-namespace --version 0.14.9 --wait

@@ -10,13 +10,7 @@ spec:
       name: letsencrypt-prod
     solvers:
       - dns01:
-          route53:
-            region: us-west-2
-            accessKeyID: $ACME_ACCESS_KEY_ID
-            secretAccessKeySecretRef:
-              name: iam-acme
-              key: secret-access-key
-        selector:
-          dnsZones:
-            - "willyhu.tw"
-            - "*.willyhu.tw"
+          cloudflare:
+            apiTokenSecretRef:
+              name: cloudflare-api-token-secret
+              key: api-token
