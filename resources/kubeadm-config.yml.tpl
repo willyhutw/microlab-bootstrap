@@ -4,6 +4,8 @@ kind: InitConfiguration
 localAPIEndpoint:
   advertiseAddress: $CONTROL_PLANE_ENDPOINT
   bindPort: 6443
+nodeRegistration:
+  criSocket: /var/run/containerd/containerd.sock
 
 ---
 apiVersion: kubeadm.k8s.io/v1beta3

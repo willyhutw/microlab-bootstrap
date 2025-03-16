@@ -5,7 +5,7 @@ metadata:
   namespace: argocd
 spec:
   hosts:
-    - "argocd-dev.willyhu.tw"
+    - argocd-dev.willyhu.tw
   gateways:
     - argocd-gateway
   http:

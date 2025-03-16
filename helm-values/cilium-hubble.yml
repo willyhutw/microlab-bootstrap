@@ -1,7 +1,3 @@
-socketLB:
-  hostNamespaceOnly: true
-cni:
-  exclusive: false
 hubble:
   enabled: true
   relay:

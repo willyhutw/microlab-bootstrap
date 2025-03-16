@@ -12,7 +12,7 @@ spec:
         name: http
         protocol: HTTP
       hosts:
-        - "*"
+        - hubble-dev.willyhu.tw
       tls:
         httpsRedirect: true
     - port:
@@ -20,7 +20,7 @@ spec:
         name: https
         protocol: HTTPS
       hosts:
-        - "*"
+        - hubble-dev.willyhu.tw
       tls:
         credentialName: hubble-dev-willyhu-tw-tls
         mode: SIMPLE
