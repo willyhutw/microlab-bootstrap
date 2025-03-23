@@ -1,4 +1,4 @@
 service:
   annotations:
-    lbipam.cilium.io/ips: 192.168.13.96
+    lbipam.cilium.io/ips: 192.168.12.96
   externalTrafficPolicy: Local
