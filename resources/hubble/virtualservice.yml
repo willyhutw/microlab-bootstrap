@@ -5,7 +5,7 @@ metadata:
   namespace: kube-system
 spec:
   hosts:
-    - hubble-dev.willyhu.tw
+    - hubble.willyhu.tw
   gateways:
     - hubble-gateway
   http:

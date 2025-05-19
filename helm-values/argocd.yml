@@ -1,5 +1,5 @@
 global:
-  domain: argocd-dev.willyhu.tw
+  domain: argocd.willyhu.tw
 configs:
   params:
     server.insecure: true

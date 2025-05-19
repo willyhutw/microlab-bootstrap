@@ -6,13 +6,14 @@ metadata:
 spec:
   selector:
     istio: ingressgateway
+    igw-type: internal
   servers:
     - port:
         number: 80
         name: http
         protocol: HTTP
       hosts:
-        - argocd-dev.willyhu.tw
+        - argocd.willyhu.tw
       tls:
         httpsRedirect: true
     - port:
@@ -20,7 +21,7 @@ spec:
         name: https
         protocol: HTTPS
       hosts:
-        - argocd-dev.willyhu.tw
+        - argocd.willyhu.tw
       tls:
-        credentialName: argocd-dev-willyhu-tw-tls
+        credentialName: argocd-willyhu-tw-tls
         mode: SIMPLE
