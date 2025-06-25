@@ -43,13 +43,8 @@ main() {
   helm upgrade --install -n argocd argocd argo/argo-cd --create-namespace -f ./helm-values/argocd.yml --version 7.8.28 --wait
   kubectl apply -f resources/argocd
 
-  # apply storage-class, pv, pvc and configmap for internal monitoring services.
-  kubectl create namespace monitoring
+  # apply storage-class for internal monitoring pv.
   kubectl apply -f ./resources/local-storage.yml
-  kubectl apply -f ./resources/monitoring/grafana
-  kubectl apply -f ./resources/monitoring/loki
-  kubectl apply -f ./resources/monitoring/prometheus
-  kubectl apply -f ./resources/monitoring/prometheus-snmp-exporter
 }
 
 main
