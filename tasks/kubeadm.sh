@@ -3,7 +3,18 @@
 set -e
 
 main() {
-  echo "Installing kubeadm ${KUBEADM_VERSION}"
+  local hostname=$(uname -n)
+  local arch=$(uname -m)
+
+  echo "Installing containerd - ${hostname} - ${arch}"
+
+  sudo apt-get update
+  sudo apt-get install -y containerd
+  containerd config default | sudo tee /etc/containerd/config.toml
+  sudo sed -i 's/SystemdCgroup = false/SystemdCgroup = true/' /etc/containerd/config.toml
+  sudo systemctl restart containerd.service
+
+  echo "Installing kubeadm ${KUBEADM_VERSION} - ${hostname} - ${arch}"
 
   sudo apt update
   sudo apt install -y apt-transport-https ca-certificates curl gpg

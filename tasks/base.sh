@@ -2,18 +2,19 @@
 
 set -e
 
-create_local_storage() {
-  sudo mkdir -p /mnt/data/{grafana,loki,prometheus}
-}
-
 cgroup_memory_on() {
   sudo sed -i '/cgroup_enable=memory cgroup_memory=1/! s/$/ cgroup_enable=memory cgroup_memory=1/' /boot/firmware/cmdline.txt
 }
 
 arrch64_swap_off() {
-  sudo dphys-swapfile swapoff
-  sudo dphys-swapfile uninstall
-  sudo systemctl disable dphys-swapfile
+  # For Raspbian 13.2 trixie
+  sudo systemctl stop dev-zram0.swap
+  sudo systemctl disable dev-zram0.swap
+  sudo systemctl mask dev-zram0.swapoff
+
+  sudo systemctl stop systemd-zram-setup@zram0.service
+  sudo systemctl disable systemd-zram-setup@zram0.service
+  sudo systemctl mask systemd-zram-setup@zram0.service
 }
 
 kernel_modules_load() {
@@ -38,7 +39,7 @@ main() {
   local hostname=$(uname -n)
   local arch=$(uname -m)
 
-  echo "Initializing - ${hostname} - ${arch}"
+  echo "Initializing system - ${hostname} - ${arch}"
 
   if [[ ${arch} == "aarch64" ]]; then
     cgroup_memory_on
@@ -47,7 +48,6 @@ main() {
 
   kernel_modules_load
   ipv4_forward_enable
-  create_local_storage
 }
 
 main

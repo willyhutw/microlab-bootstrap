@@ -1,3 +1,3 @@
 resources/kubeadm-config.yml
-resources/letsencrypt-cluster-issuer.yml
-tasks/kubeadm_rendered.sh
+helm-values/cilium.yml
+.claude/

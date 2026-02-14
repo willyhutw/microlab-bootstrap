@@ -1,8 +1,2 @@
 #!/bin/bash
-
-set -e
-
-main() {
-}
-
-main
+# Placeholder: actual join logic is handled in run.sh
