@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -e
+set -eo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "${SCRIPT_DIR}/config.env"
@@ -43,8 +43,15 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-if [[ ! -f "./tasks/${TASK}.sh" ]]; then
-  echo "!!! Task script './tasks/${TASK}.sh' not found !!!"
+[[ -z "$TASK" || -z "$SERVERS" || -z "$SSH_USER" ]] && usage
+
+if [[ ! -f "${SCRIPT_DIR}/tasks/${TASK}.sh" ]]; then
+  echo "!!! Task script '${SCRIPT_DIR}/tasks/${TASK}.sh' not found !!!"
+  exit 1
+fi
+
+if [[ ${TASK,,} == "init" && "$SERVERS" == *","* ]]; then
+  echo "!!! Task 'init' only supports a single server !!!"
   exit 1
 fi
 
@@ -54,39 +61,45 @@ for SERVER in "${SERVER_LIST[@]}"; do
   echo "### Running task '${TASK}' on server '${SERVER}' ###"
 
   if [[ ${TASK,,} == "kubeadm" ]]; then
-    ssh "$SSH_USER@${SERVER}" "KUBEADM_VERSION=${KUBEADM_VERSION} bash -s" <"./tasks/kubeadm.sh"
+    ssh "$SSH_USER@${SERVER}" "KUBEADM_VERSION=${KUBEADM_VERSION} bash -s" <"${SCRIPT_DIR}/tasks/kubeadm.sh"
   elif [[ ${TASK,,} == "init" ]]; then
     echo "### Rendering 'kubeadm-config.yml.tpl' ###"
     export CONTROL_PLANE_ENDPOINT=${SERVER}
-    envsubst '$CLUSTER_NAME $K8S_VERSION $CONTROL_PLANE_ENDPOINT' <./resources/kubeadm-config.yml.tpl >./resources/kubeadm-config.yml
+    envsubst '$CLUSTER_NAME $K8S_VERSION $CONTROL_PLANE_ENDPOINT' <"${SCRIPT_DIR}/resources/kubeadm-config.yml.tpl" >"${SCRIPT_DIR}/resources/kubeadm-config.yml"
 
     echo "### Copying resource 'kubeadm-config.yml' to server '${SERVER}' ###"
-    scp "./resources/kubeadm-config.yml" $SSH_USER@$SERVER:/tmp/
-    ssh "$SSH_USER@${SERVER}" "bash -s" <"./tasks/${TASK}.sh"
+    scp "${SCRIPT_DIR}/resources/kubeadm-config.yml" "$SSH_USER@$SERVER:/tmp/"
+    ssh "$SSH_USER@${SERVER}" "bash -s" <"${SCRIPT_DIR}/tasks/${TASK}.sh"
 
-    echo "### Copying 'kubeadm_join_cmd.txt' from server '${SERVER}' ###"
-    scp $SSH_USER@${SERVER}:/tmp/kubeadm_join_cmd.txt /tmp/
+    echo "### Copying join command from server '${SERVER}' ###"
+    mkdir -p "$HOME/.kube"
+    scp "$SSH_USER@${SERVER}:/tmp/kubeadm_join_cmd.txt" "$HOME/.kube/${CLUSTER_NAME}-join-cmd"
+    chmod 600 "$HOME/.kube/${CLUSTER_NAME}-join-cmd"
 
     echo "### Copying kubeconfig to '$HOME/.kube/${CLUSTER_NAME}' ###"
-    mkdir -p $HOME/.kube
-    scp $SSH_USER@${SERVER}:~/.kube/config $HOME/.kube/${CLUSTER_NAME}
-    export KUBECONFIG=$HOME/.kube/${CLUSTER_NAME}
+    scp "$SSH_USER@${SERVER}:~/.kube/config" "$HOME/.kube/${CLUSTER_NAME}"
+    chmod 600 "$HOME/.kube/${CLUSTER_NAME}"
+    export KUBECONFIG="$HOME/.kube/${CLUSTER_NAME}"
 
     echo "### Installing CNI (Cilium) ###"
-    envsubst '$CONTROL_PLANE_ENDPOINT' <./helm-values/cilium.yml.tpl >./helm-values/cilium.yml
+    envsubst '$CONTROL_PLANE_ENDPOINT' <"${SCRIPT_DIR}/helm-values/cilium.yml.tpl" >"${SCRIPT_DIR}/helm-values/cilium.yml"
     helm repo add cilium https://helm.cilium.io --force-update
     helm repo update cilium
-    helm upgrade --install -n kube-system cilium cilium/cilium --create-namespace -f ./helm-values/cilium.yml --version ${CILIUM_VERSION} --wait
+    helm upgrade --install -n kube-system cilium cilium/cilium --create-namespace -f "${SCRIPT_DIR}/helm-values/cilium.yml" --version ${CILIUM_VERSION} --wait
 
     echo "### Registering cluster '${CLUSTER_NAME}' to ArgoCD ###"
-    argocd login ${ARGOCD_SERVER} --username ${ARGOCD_USERNAME} --password ${ARGOCD_PASSWORD} --insecure --grpc-web
-    KUBECONFIG=${ARGOCD_KUBECONFIG}:$HOME/.kube/${CLUSTER_NAME} argocd cluster add kubernetes-admin@${CLUSTER_NAME} --name ${CLUSTER_NAME} --grpc-web
+    argocd login ${ARGOCD_SERVER} --username ${ARGOCD_USERNAME} --password ${ARGOCD_PASSWORD} --grpc-web
+    if argocd cluster get "https://${SERVER}:6443" --grpc-web &>/dev/null; then
+      echo "### Cluster '${CLUSTER_NAME}' already registered in ArgoCD, skipping ###"
+    else
+      KUBECONFIG=${ARGOCD_KUBECONFIG}:$HOME/.kube/${CLUSTER_NAME} argocd cluster add kubernetes-admin@${CLUSTER_NAME} --name ${CLUSTER_NAME} --grpc-web
+    fi
 
     unset CONTROL_PLANE_ENDPOINT KUBECONFIG
   elif [[ ${TASK,,} == "join" ]]; then
-    ssh "$SSH_USER@${SERVER}" "sudo bash -s" <"/tmp/kubeadm_join_cmd.txt"
+    ssh "$SSH_USER@${SERVER}" "sudo bash -s" <"$HOME/.kube/${CLUSTER_NAME}-join-cmd"
   else
-    ssh "$SSH_USER@${SERVER}" "bash -s" <"./tasks/${TASK}.sh"
+    ssh "$SSH_USER@${SERVER}" "bash -s" <"${SCRIPT_DIR}/tasks/${TASK}.sh"
   fi
 
   if [[ ${TASK,,} == "base" ]]; then

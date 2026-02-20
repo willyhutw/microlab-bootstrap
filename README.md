@@ -63,7 +63,7 @@ Installs containerd, kubeadm, kubelet, and kubectl.
 
 ### 3. Initialize cluster (control plane only)
 
-Runs `kubeadm init`, copies kubeconfig to local machine, installs Cilium CNI, and registers the cluster to ArgoCD.
+Runs `kubeadm init`, copies kubeconfig and join command to `~/.kube/` on the local machine, installs Cilium CNI, and registers the cluster to ArgoCD.
 
 ```bash
 ./run.sh --task init --server 192.168.12.21 --ssh-user willyhu

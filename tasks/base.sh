@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -e
+set -eo pipefail
 
 cgroup_memory_on() {
   sudo sed -i '/cgroup_enable=memory cgroup_memory=1/! s/$/ cgroup_enable=memory cgroup_memory=1/' /boot/firmware/cmdline.txt

@@ -14,7 +14,7 @@ kubernetesVersion: $K8S_VERSION
 controlPlaneEndpoint: $CONTROL_PLANE_ENDPOINT:6443
 networking:
   serviceSubnet: 10.96.0.0/16
-  podSubnet: 10.244.0.0/24
+  podSubnet: 10.244.0.0/16
   dnsDomain: cluster.local
 certificatesDir: /etc/kubernetes/pki
 imageRepository: registry.k8s.io
