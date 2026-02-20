@@ -6,7 +6,7 @@ cgroup_memory_on() {
   sudo sed -i '/cgroup_enable=memory cgroup_memory=1/! s/$/ cgroup_enable=memory cgroup_memory=1/' /boot/firmware/cmdline.txt
 }
 
-arrch64_swap_off() {
+aarch64_swap_off() {
   # For Raspbian 13.2 trixie
   sudo systemctl stop dev-zram0.swap
   sudo systemctl disable dev-zram0.swap
@@ -43,7 +43,7 @@ main() {
 
   if [[ ${arch} == "aarch64" ]]; then
     cgroup_memory_on
-    arrch64_swap_off
+    aarch64_swap_off
   fi
 
   kernel_modules_load
