@@ -2,4 +2,3 @@ resources/kubeadm-config.yml
 helm-values/cilium.yml
 .claude/
 .envrc
-config.env.local
