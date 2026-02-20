@@ -9,3 +9,6 @@ socketLB:
   hostNamespaceOnly: true
 cni:
   exclusive: false
+  binPath: /usr/lib/cni
+operator:
+  replicas: 1
