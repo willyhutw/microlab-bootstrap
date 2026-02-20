@@ -1,0 +1,4 @@
+export ARGOCD_SERVER=argocd.example.com
+export ARGOCD_USERNAME=admin
+export ARGOCD_PASSWORD=your-argocd-password
+export ARGOCD_KUBECONFIG=$HOME/.kube/k3s

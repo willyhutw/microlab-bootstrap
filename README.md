@@ -7,16 +7,32 @@ Bootstrap script for setting up a multi-node Kubernetes cluster on Raspberry Pi 
 - Raspberry Pi nodes with Debian/Raspbian installed
 - SSH access to all nodes
 - Helm installed on the local machine
+- ArgoCD CLI installed on the local machine
+- direnv installed on the local machine
 
 ## Configuration
 
-Edit `config.env` with your settings:
+Edit `config.env` with your cluster settings:
 
 ```bash
 export CLUSTER_NAME=micro
 export KUBEADM_VERSION=v1.35
 export K8S_VERSION=v1.35.1
-export CILIUM_VERSION=1.18.7
+export CILIUM_VERSION=1.19.1
+```
+
+Copy `.envrc.example` to `.envrc` and fill in your ArgoCD credentials:
+
+```bash
+cp .envrc.example .envrc
+direnv allow
+```
+
+```bash
+export ARGOCD_SERVER=argocd.example.com
+export ARGOCD_USERNAME=admin
+export ARGOCD_PASSWORD=your-argocd-password
+export ARGOCD_KUBECONFIG=$HOME/.kube/k3s
 ```
 
 ## Usage
@@ -47,7 +63,7 @@ Installs containerd, kubeadm, kubelet, and kubectl.
 
 ### 3. Initialize cluster (control plane only)
 
-Runs `kubeadm init`, copies kubeconfig to local machine, and installs Cilium CNI.
+Runs `kubeadm init`, copies kubeconfig to local machine, installs Cilium CNI, and registers the cluster to ArgoCD.
 
 ```bash
 ./run.sh --task init --server 192.168.12.21 --ssh-user willyhu
@@ -65,7 +81,8 @@ Joins worker nodes to the cluster using the join command from step 3.
 
 ```
 microlab-bootstrap/
-├── config.env                      # Versions and defaults
+├── config.env                      # Cluster versions and settings
+├── .envrc.example                  # ArgoCD credentials template (copy to .envrc)
 ├── run.sh                          # Entry point
 ├── tasks/
 │   ├── base.sh                     # System preparation
