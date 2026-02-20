@@ -78,6 +78,10 @@ for SERVER in "${SERVER_LIST[@]}"; do
     helm repo update cilium
     helm upgrade --install -n kube-system cilium cilium/cilium --create-namespace -f ./helm-values/cilium.yml --version ${CILIUM_VERSION} --wait
 
+    echo "### Registering cluster '${CLUSTER_NAME}' to ArgoCD ###"
+    argocd login ${ARGOCD_SERVER} --username ${ARGOCD_USERNAME} --password ${ARGOCD_PASSWORD} --insecure --grpc-web
+    KUBECONFIG=${ARGOCD_KUBECONFIG}:$HOME/.kube/${CLUSTER_NAME} argocd cluster add kubernetes-admin@${CLUSTER_NAME} --name ${CLUSTER_NAME} --grpc-web
+
     unset CONTROL_PLANE_ENDPOINT KUBECONFIG
   elif [[ ${TASK,,} == "join" ]]; then
     ssh "$SSH_USER@${SERVER}" "sudo bash -s" <"/tmp/kubeadm_join_cmd.txt"
