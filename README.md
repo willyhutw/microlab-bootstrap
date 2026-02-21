@@ -50,7 +50,7 @@ Run tasks in order:
 
 ### 1. Base system setup (all nodes)
 
-Configures kernel modules, sysctl, swap off. Auto-reboots each node and waits for it to come back.
+Configures kernel modules, sysctl, swap off, and creates `/mnt/data` directories for persistent storage. Auto-reboots each node and waits for it to come back.
 
 ```bash
 ./run.sh --task base --server 192.168.12.21,192.168.12.31,192.168.12.32 --ssh-user willyhu

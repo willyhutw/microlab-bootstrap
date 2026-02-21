@@ -35,6 +35,12 @@ EOF
   sudo sysctl --system
 }
 
+create_data_dirs() {
+  sudo mkdir -p /mnt/data/grafana
+  sudo mkdir -p /mnt/data/prometheus
+  sudo mkdir -p /mnt/data/loki
+}
+
 main() {
   local hostname=$(uname -n)
   local arch=$(uname -m)
@@ -48,6 +54,7 @@ main() {
 
   kernel_modules_load
   ipv4_forward_enable
+  create_data_dirs
 }
 
 main
