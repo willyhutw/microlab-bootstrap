@@ -87,6 +87,17 @@ for SERVER in "${SERVER_LIST[@]}"; do
     helm repo update cilium
     helm upgrade --install -n kube-system cilium cilium/cilium --create-namespace -f "${SCRIPT_DIR}/helm-values/cilium.yml" --version ${CILIUM_VERSION} --wait
 
+    echo "### Installing cert-manager ###"
+    helm repo add jetstack https://charts.jetstack.io --force-update
+    helm repo update jetstack
+    helm upgrade --install -n cert-manager cert-manager jetstack/cert-manager --create-namespace --set crds.enabled=true --version ${CERT_MANAGER_VERSION} --wait
+    CLOUDFLARE_API_TOKEN=$(cat ~/cloudflare_acme_token.txt)
+    kubectl -n cert-manager create secret generic cloudflare-api-token-secret \
+      --from-literal=api-token=${CLOUDFLARE_API_TOKEN} \
+      --dry-run=client -o yaml | kubectl apply -f -
+    unset CLOUDFLARE_API_TOKEN
+    envsubst '$ACME_EMAIL' <"${SCRIPT_DIR}/resources/letsencrypt-cluster-issuer.yml.tpl" | kubectl apply -f -
+
     echo "### Registering cluster '${CLUSTER_NAME}' to ArgoCD ###"
     argocd login ${ARGOCD_SERVER} --username ${ARGOCD_USERNAME} --password ${ARGOCD_PASSWORD} --grpc-web
     if argocd cluster get "https://${SERVER}:6443" --grpc-web &>/dev/null; then

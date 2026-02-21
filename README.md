@@ -1,6 +1,6 @@
 # Microlab Bootstrap
 
-Bootstrap script for setting up a multi-node Kubernetes cluster on Raspberry Pi using kubeadm and Cilium CNI.
+Bootstrap script for setting up a multi-node Kubernetes cluster on Raspberry Pi using kubeadm, Cilium CNI, and cert-manager.
 
 ## Prerequisites
 
@@ -9,6 +9,7 @@ Bootstrap script for setting up a multi-node Kubernetes cluster on Raspberry Pi 
 - Helm installed on the local machine
 - ArgoCD CLI installed on the local machine
 - direnv installed on the local machine
+- `~/cloudflare_acme_token.txt` containing your Cloudflare API token (used for Let's Encrypt DNS01 challenge)
 
 ## Configuration
 
@@ -19,9 +20,10 @@ export CLUSTER_NAME=micro
 export KUBEADM_VERSION=v1.35
 export K8S_VERSION=v1.35.1
 export CILIUM_VERSION=1.19.1
+export CERT_MANAGER_VERSION=1.19.3
 ```
 
-Copy `.envrc.example` to `.envrc` and fill in your ArgoCD credentials:
+Copy `.envrc.example` to `.envrc` and fill in your credentials:
 
 ```bash
 cp .envrc.example .envrc
@@ -33,6 +35,7 @@ export ARGOCD_SERVER=argocd.example.com
 export ARGOCD_USERNAME=admin
 export ARGOCD_PASSWORD=your-argocd-password
 export ARGOCD_KUBECONFIG=$HOME/.kube/k3s
+export ACME_EMAIL=your-email@example.com
 ```
 
 ## Usage
@@ -63,7 +66,11 @@ Installs containerd, kubeadm, kubelet, and kubectl.
 
 ### 3. Initialize cluster (control plane only)
 
-Runs `kubeadm init`, copies kubeconfig and join command to `~/.kube/` on the local machine, installs Cilium CNI, and registers the cluster to ArgoCD.
+Runs `kubeadm init`, copies kubeconfig and join command to `~/.kube/` on the local machine, then:
+- Installs Cilium CNI
+- Installs cert-manager and creates the Cloudflare API token secret
+- Applies the Let's Encrypt `letsencrypt-prod` ClusterIssuer
+- Registers the cluster to ArgoCD
 
 ```bash
 ./run.sh --task init --server 192.168.12.21 --ssh-user willyhu
@@ -81,16 +88,17 @@ Joins worker nodes to the cluster using the join command from step 3.
 
 ```
 microlab-bootstrap/
-├── config.env                      # Cluster versions and settings
-├── .envrc.example                  # ArgoCD credentials template (copy to .envrc)
-├── run.sh                          # Entry point
+├── config.env                               # Cluster versions and settings
+├── .envrc.example                           # Credentials template (copy to .envrc)
+├── run.sh                                   # Entry point
 ├── tasks/
-│   ├── base.sh                     # System preparation
-│   ├── kubeadm.sh                  # containerd + kubeadm install
-│   ├── init.sh                     # kubeadm init
-│   └── join.sh                     # Placeholder (logic in run.sh)
+│   ├── base.sh                              # System preparation
+│   ├── kubeadm.sh                           # containerd + kubeadm install
+│   ├── init.sh                              # kubeadm init
+│   └── join.sh                              # Placeholder (logic in run.sh)
 ├── resources/
-│   └── kubeadm-config.yml.tpl      # kubeadm config template
+│   ├── kubeadm-config.yml.tpl              # kubeadm config template
+│   └── letsencrypt-cluster-issuer.yml.tpl  # Let's Encrypt ClusterIssuer template
 └── helm-values/
-    └── cilium.yml.tpl              # Cilium values template
+    └── cilium.yml.tpl                       # Cilium values template
 ```
