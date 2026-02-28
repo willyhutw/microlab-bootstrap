@@ -3,3 +3,4 @@ export ARGOCD_USERNAME=admin
 export ARGOCD_PASSWORD=your-argocd-password
 export ARGOCD_KUBECONFIG=$HOME/.kube/k3s
 export ACME_EMAIL=your-email@example.com
+export CF_ACME_TOKEN=your-cloudflare-api-token

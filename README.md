@@ -9,7 +9,6 @@ Bootstrap script for setting up a multi-node Kubernetes cluster on Raspberry Pi 
 - Helm installed on the local machine
 - ArgoCD CLI installed on the local machine
 - direnv installed on the local machine
-- `~/cloudflare_acme_token.txt` containing your Cloudflare API token (used for Let's Encrypt DNS01 challenge)
 
 ## Configuration
 
@@ -20,7 +19,7 @@ export CLUSTER_NAME=micro
 export KUBEADM_VERSION=v1.35
 export K8S_VERSION=v1.35.1
 export CILIUM_VERSION=1.19.1
-export CERT_MANAGER_VERSION=1.19.3
+export CERT_MANAGER_VERSION=1.19.4
 ```
 
 Copy `.envrc.example` to `.envrc` and fill in your credentials:
@@ -36,6 +35,7 @@ export ARGOCD_USERNAME=admin
 export ARGOCD_PASSWORD=your-argocd-password
 export ARGOCD_KUBECONFIG=$HOME/.kube/k3s
 export ACME_EMAIL=your-email@example.com
+export CF_ACME_TOKEN=your-cloudflare-api-token
 ```
 
 ## Usage
@@ -100,5 +100,6 @@ microlab-bootstrap/
 │   ├── kubeadm-config.yml.tpl              # kubeadm config template
 │   └── letsencrypt-cluster-issuer.yml.tpl  # Let's Encrypt ClusterIssuer template
 └── helm-values/
-    └── cilium.yml.tpl                       # Cilium values template
+    ├── cilium.yml.tpl                       # Cilium values template
+    └── cert-manager.yml                     # cert-manager values (control-plane tolerations)
 ```
