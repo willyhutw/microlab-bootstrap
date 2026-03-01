@@ -65,6 +65,9 @@ if [[ ${TASK,,} == "addons" ]]; then
     --dry-run=client -o yaml | kubectl apply -f -
   envsubst '$ACME_EMAIL' <"${SCRIPT_DIR}/resources/letsencrypt-cluster-issuer.yml.tpl" | kubectl apply -f -
 
+  echo "### Applying Cilium IP pool and L2 announcement policy ###"
+  kubectl apply -f "${SCRIPT_DIR}/resources/cilium-ippool.yml"
+
   echo "### Installing Traefik (internal) ###"
   helm repo add traefik https://traefik.github.io/charts --force-update
   helm repo update traefik

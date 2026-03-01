@@ -3,14 +3,16 @@
 set -eo pipefail
 
 cgroup_memory_on() {
-  sudo sed -i '/cgroup_enable=memory cgroup_memory=1/! s/$/ cgroup_enable=memory cgroup_memory=1/' /boot/firmware/cmdline.txt
+  if ! grep -q 'cgroup_enable=memory cgroup_memory=1' /boot/firmware/cmdline.txt; then
+    sudo sed -i '1 s/$/ cgroup_enable=memory cgroup_memory=1/' /boot/firmware/cmdline.txt
+  fi
 }
 
 aarch64_swap_off() {
   # For Raspbian 13.2 trixie (zram-based swap)
   sudo systemctl stop dev-zram0.swap || true
   sudo systemctl disable dev-zram0.swap || true
-  sudo systemctl mask dev-zram0.swapoff || true
+  sudo systemctl mask dev-zram0.swap || true
 
   sudo systemctl stop systemd-zram-setup@zram0.service || true
   sudo systemctl disable systemd-zram-setup@zram0.service || true
