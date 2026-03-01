@@ -1,4 +1,6 @@
 resources/kubeadm-config.yml
 helm-values/cilium.yml
+helm-values/traefik-internal.yml
+helm-values/traefik-external.yml
 .claude/
 .envrc

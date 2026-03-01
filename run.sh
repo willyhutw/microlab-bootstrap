@@ -7,14 +7,16 @@ source "${SCRIPT_DIR}/config.env"
 
 usage() {
   echo "Usage: $0 --task <base|kubeadm|init|join> --server <server1,server2,server3> --ssh-user <username>"
+  echo "       $0 --task addons"
   echo "Example: $0 --task base --server 192.168.12.21,192.168.12.31,192.168.12.32 --ssh-user willyhu"
   echo "Example: $0 --task kubeadm --server 192.168.12.21,192.168.12.31,192.168.12.32 --ssh-user willyhu"
   echo "Example: $0 --task init --server 192.168.12.21 --ssh-user willyhu"
   echo "Example: $0 --task join --server 192.168.12.31,192.168.12.32 --ssh-user willyhu"
+  echo "Example: $0 --task addons"  # no --server or --ssh-user needed
   exit 1
 }
 
-if [[ $# -lt 6 ]]; then
+if [[ $# -lt 1 ]]; then
   usage
 fi
 
@@ -43,12 +45,54 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-[[ -z "$TASK" || -z "$SERVERS" || -z "$SSH_USER" ]] && usage
+[[ -z "$TASK" ]] && usage
 
 if [[ ! -f "${SCRIPT_DIR}/tasks/${TASK}.sh" ]]; then
   echo "!!! Task script '${SCRIPT_DIR}/tasks/${TASK}.sh' not found !!!"
   exit 1
 fi
+
+if [[ ${TASK,,} == "addons" ]]; then
+  echo "### Running task 'addons' ###"
+  export KUBECONFIG="$HOME/.kube/${CLUSTER_NAME}"
+
+  echo "### Installing cert-manager ###"
+  helm repo add jetstack https://charts.jetstack.io --force-update
+  helm repo update jetstack
+  helm upgrade --install -n cert-manager cert-manager jetstack/cert-manager --create-namespace --set crds.enabled=true -f "${SCRIPT_DIR}/helm-values/cert-manager.yml" --version ${CERT_MANAGER_VERSION} --wait
+  kubectl -n cert-manager create secret generic cloudflare-api-token-secret \
+    --from-literal=api-token=${CF_ACME_TOKEN} \
+    --dry-run=client -o yaml | kubectl apply -f -
+  envsubst '$ACME_EMAIL' <"${SCRIPT_DIR}/resources/letsencrypt-cluster-issuer.yml.tpl" | kubectl apply -f -
+
+  echo "### Installing Traefik (internal) ###"
+  helm repo add traefik https://traefik.github.io/charts --force-update
+  helm repo update traefik
+  envsubst '$TRAEFIK_INTERNAL_IP' <"${SCRIPT_DIR}/helm-values/traefik-internal.yml.tpl" >"${SCRIPT_DIR}/helm-values/traefik-internal.yml"
+  helm upgrade --install -n traefik traefik-internal traefik/traefik --create-namespace \
+    -f "${SCRIPT_DIR}/helm-values/traefik-internal.yml" --version ${TRAEFIK_VERSION} --wait
+
+  echo "### Installing Traefik (external) ###"
+  envsubst '$TRAEFIK_EXTERNAL_IP' <"${SCRIPT_DIR}/helm-values/traefik-external.yml.tpl" >"${SCRIPT_DIR}/helm-values/traefik-external.yml"
+  helm upgrade --install -n traefik traefik-external traefik/traefik \
+    -f "${SCRIPT_DIR}/helm-values/traefik-external.yml" --version ${TRAEFIK_VERSION} --wait
+
+  echo "### Installing ArgoCD ###"
+  helm repo add argo https://argoproj.github.io/argo-helm --force-update
+  helm repo update argo
+  helm upgrade --install -n argocd argocd argo/argo-cd --create-namespace \
+    -f "${SCRIPT_DIR}/helm-values/argocd.yml" --version ${ARGOCD_VERSION} --wait
+  envsubst '$ARGOCD_DOMAIN' <"${SCRIPT_DIR}/resources/argocd-ingress.yml.tpl" | kubectl apply -f -
+  ARGOCD_INITIAL_PASSWORD=$(kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath='{.data.password}' | base64 -d)
+  echo "### ArgoCD initial admin password: ${ARGOCD_INITIAL_PASSWORD} ###"
+  echo "### ArgoCD is accessible at https://${ARGOCD_DOMAIN} ###"
+
+  unset KUBECONFIG
+  echo "### Task 'addons' successfully executed ###"
+  exit 0
+fi
+
+[[ -z "$SERVERS" || -z "$SSH_USER" ]] && usage
 
 if [[ ${TASK,,} == "init" && "$SERVERS" == *","* ]]; then
   echo "!!! Task 'init' only supports a single server !!!"
@@ -61,7 +105,7 @@ for SERVER in "${SERVER_LIST[@]}"; do
   echo "### Running task '${TASK}' on server '${SERVER}' ###"
 
   if [[ ${TASK,,} == "kubeadm" ]]; then
-    ssh "$SSH_USER@${SERVER}" "KUBEADM_VERSION=${KUBEADM_VERSION} bash -s" <"${SCRIPT_DIR}/tasks/kubeadm.sh"
+    ssh "$SSH_USER@${SERVER}" "KUBEADM_VERSION=${KUBEADM_VERSION} K8S_VERSION=${K8S_VERSION} SANDBOX_IMAGE=${SANDBOX_IMAGE} bash -s" <"${SCRIPT_DIR}/tasks/kubeadm.sh"
   elif [[ ${TASK,,} == "init" ]]; then
     echo "### Rendering 'kubeadm-config.yml.tpl' ###"
     export CONTROL_PLANE_ENDPOINT=${SERVER}
@@ -86,23 +130,6 @@ for SERVER in "${SERVER_LIST[@]}"; do
     helm repo add cilium https://helm.cilium.io --force-update
     helm repo update cilium
     helm upgrade --install -n kube-system cilium cilium/cilium --create-namespace -f "${SCRIPT_DIR}/helm-values/cilium.yml" --version ${CILIUM_VERSION} --wait
-
-    echo "### Installing cert-manager ###"
-    helm repo add jetstack https://charts.jetstack.io --force-update
-    helm repo update jetstack
-    helm upgrade --install -n cert-manager cert-manager jetstack/cert-manager --create-namespace --set crds.enabled=true -f "${SCRIPT_DIR}/helm-values/cert-manager.yml" --version ${CERT_MANAGER_VERSION} --wait
-    kubectl -n cert-manager create secret generic cloudflare-api-token-secret \
-      --from-literal=api-token=${CF_ACME_TOKEN} \
-      --dry-run=client -o yaml | kubectl apply -f -
-    envsubst '$ACME_EMAIL' <"${SCRIPT_DIR}/resources/letsencrypt-cluster-issuer.yml.tpl" | kubectl apply -f -
-
-    echo "### Registering cluster '${CLUSTER_NAME}' to ArgoCD ###"
-    argocd login ${ARGOCD_SERVER} --username ${ARGOCD_USERNAME} --password ${ARGOCD_PASSWORD} --grpc-web
-    if argocd cluster get "https://${SERVER}:6443" --grpc-web &>/dev/null; then
-      echo "### Cluster '${CLUSTER_NAME}' already registered in ArgoCD, skipping ###"
-    else
-      KUBECONFIG=${ARGOCD_KUBECONFIG}:$HOME/.kube/${CLUSTER_NAME} argocd cluster add kubernetes-admin@${CLUSTER_NAME} --name ${CLUSTER_NAME} --grpc-web
-    fi
 
     unset CONTROL_PLANE_ENDPOINT KUBECONFIG
   elif [[ ${TASK,,} == "join" ]]; then

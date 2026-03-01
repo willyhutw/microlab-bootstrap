@@ -13,6 +13,7 @@ main() {
   sudo apt-get install -y containerd
   containerd config default | sudo tee /etc/containerd/config.toml
   sudo sed -i 's/SystemdCgroup = false/SystemdCgroup = true/' /etc/containerd/config.toml
+  sudo sed -i "s|sandbox_image = \".*\"|sandbox_image = \"${SANDBOX_IMAGE}\"|" /etc/containerd/config.toml
   sudo systemctl restart containerd.service
 
   echo "Installing kubeadm ${KUBEADM_VERSION} - ${hostname} - ${arch}"
@@ -25,7 +26,8 @@ main() {
   curl -fsSL https://pkgs.k8s.io/core:/stable:/${KUBEADM_VERSION}/deb/Release.key | sudo gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
   echo "deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/${KUBEADM_VERSION}/deb/ /" | sudo tee /etc/apt/sources.list.d/kubernetes.list
   sudo apt-get update
-  sudo apt-get install -y kubelet kubeadm kubectl
+  K8S_PKG_VERSION="${K8S_VERSION#v}"
+  sudo apt-get install -y kubelet="${K8S_PKG_VERSION}-*" kubeadm="${K8S_PKG_VERSION}-*" kubectl="${K8S_PKG_VERSION}-*"
   sudo apt-mark hold kubelet kubeadm kubectl
 }
 

@@ -7,14 +7,19 @@ cgroup_memory_on() {
 }
 
 aarch64_swap_off() {
-  # For Raspbian 13.2 trixie
-  sudo systemctl stop dev-zram0.swap
-  sudo systemctl disable dev-zram0.swap
-  sudo systemctl mask dev-zram0.swapoff
+  # For Raspbian 13.2 trixie (zram-based swap)
+  sudo systemctl stop dev-zram0.swap || true
+  sudo systemctl disable dev-zram0.swap || true
+  sudo systemctl mask dev-zram0.swapoff || true
 
-  sudo systemctl stop systemd-zram-setup@zram0.service
-  sudo systemctl disable systemd-zram-setup@zram0.service
-  sudo systemctl mask systemd-zram-setup@zram0.service
+  sudo systemctl stop systemd-zram-setup@zram0.service || true
+  sudo systemctl disable systemd-zram-setup@zram0.service || true
+  sudo systemctl mask systemd-zram-setup@zram0.service || true
+}
+
+swap_off() {
+  sudo swapoff -a
+  sudo sed -i '/\sswap\s/d' /etc/fstab
 }
 
 kernel_modules_load() {
@@ -51,6 +56,8 @@ main() {
     cgroup_memory_on
     aarch64_swap_off
   fi
+
+  swap_off
 
   kernel_modules_load
   ipv4_forward_enable
