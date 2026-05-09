@@ -1,5 +1,6 @@
 export ACME_EMAIL=your-email@example.com
 export CF_ACME_TOKEN=your-cloudflare-api-token
-export ARGOCD_DOMAIN=argocd.example.com
-export TRAEFIK_INTERNAL_IP=192.168.x.x
-export TRAEFIK_EXTERNAL_IP=192.168.x.x
+export ARGOCD_SERVER=argocd.willyhu.tw
+export ARGOCD_USERNAME=admin
+export ARGOCD_PASSWORD=your-argocd-password
+export ARGOCD_KUBECONFIG=$HOME/.kube/argocd

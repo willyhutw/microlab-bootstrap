@@ -1,6 +1,6 @@
 # Microlab Bootstrap
 
-Bootstrap script for setting up a multi-node Kubernetes cluster on Raspberry Pi using kubeadm, Cilium CNI, Traefik, cert-manager, and ArgoCD.
+Bootstrap script for setting up a multi-node Kubernetes cluster on Raspberry Pi using kubeadm, Cilium CNI, and cert-manager. After bootstrap, the cluster is registered to an external ArgoCD instance which manages all subsequent workloads (Istio, monitoring, etc.).
 
 ## Prerequisites
 
@@ -9,12 +9,13 @@ Bootstrap script for setting up a multi-node Kubernetes cluster on Raspberry Pi 
 - The following tools installed on your local machine:
   - `helm`
   - `kubectl`
+  - `argocd` CLI
   - `envsubst` (from `gettext`)
   - `direnv`
 
 ## Configuration
 
-Edit `config.env` with your cluster settings and IP addresses:
+Edit `config.env` with your cluster settings:
 
 ```bash
 export CLUSTER_NAME=micro
@@ -23,10 +24,6 @@ export K8S_VERSION=v1.35.4
 export SANDBOX_IMAGE=registry.k8s.io/pause:3.10
 export CILIUM_VERSION=1.19.3
 export CERT_MANAGER_VERSION=1.20.2
-export TRAEFIK_VERSION=39.0.9
-export TRAEFIK_EXTERNAL_IP=192.168.12.91
-export TRAEFIK_INTERNAL_IP=192.168.12.96
-export ARGOCD_VERSION=9.5.13
 ```
 
 Copy `.envrc.example` to `.envrc` and fill in your credentials:
@@ -39,15 +36,16 @@ direnv allow
 ```bash
 export ACME_EMAIL=your-email@example.com
 export CF_ACME_TOKEN=your-cloudflare-api-token
-export ARGOCD_DOMAIN=argocd.example.com
+export ARGOCD_SERVER=argocd.willyhu.tw
+export ARGOCD_USERNAME=admin
+export ARGOCD_PASSWORD=your-argocd-password
+export ARGOCD_KUBECONFIG=$HOME/.kube/argocd
 ```
 
 ## Usage
 
 ```bash
 ./run.sh --task <task> --server <server1,server2,...> --ssh-user <username>
-# addons task does not need --server or --ssh-user
-./run.sh --task addons
 ```
 
 ## Tasks
@@ -72,10 +70,13 @@ Installs containerd (with systemd cgroup), kubeadm, kubelet, and kubectl. Versio
 
 ### 3. Initialize cluster (control plane only)
 
-Renders `kubeadm-config.yml` from the template and runs `kubeadm init` on the control plane node. Then:
-- Copies kubeconfig to `~/.kube/<CLUSTER_NAME>` on your local machine
-- Copies the join command to `~/.kube/<CLUSTER_NAME>-join-cmd` on your local machine
+Renders `kubeadm-config.yml` from the template and runs `kubeadm init` on the control plane node. Then runs the following entirely from the local machine:
+
+- Copies kubeconfig to `~/.kube/<CLUSTER_NAME>` and join command to `~/.kube/<CLUSTER_NAME>-join-cmd`
 - Installs Cilium CNI via Helm
+- Applies Cilium `CiliumLoadBalancerIPPool` and `CiliumL2AnnouncementPolicy`
+- Installs cert-manager via Helm, creates the Cloudflare API token secret, and applies the `letsencrypt-prod` ClusterIssuer
+- Registers the cluster to the external ArgoCD instance
 
 Only accepts a single server.
 
@@ -91,29 +92,22 @@ Joins worker nodes to the cluster using the join command saved by step 3.
 ./run.sh --task join --server 192.168.12.31,192.168.12.32 --ssh-user willyhu
 ```
 
-### 5. Install add-ons (local machine, no --server needed)
+### 5. Apply ArgoCD applications (local machine)
 
-Installs all cluster add-ons using `~/.kube/<CLUSTER_NAME>` as the kubeconfig. Runs entirely from your local machine via Helm and kubectl:
-
-- **cert-manager** — with Cloudflare API token secret and `letsencrypt-prod` ClusterIssuer (DNS-01)
-- **Cilium IP pool** — `CiliumLoadBalancerIPPool` and `CiliumL2AnnouncementPolicy` for LB IP assignment
-- **Traefik (internal)** — `traefik-internal` ingress class, fixed LoadBalancer IP from Cilium pool
-- **Traefik (external)** — `traefik-external` ingress class, fixed LoadBalancer IP from Cilium pool
-- **ArgoCD** — deployed via Helm, exposed via Traefik internal with a TLS ingress at `$ARGOCD_DOMAIN`
-
-After completion, the ArgoCD initial admin password is printed to the console.
+After workers have joined, apply the ArgoCD `Application` manifests so ArgoCD begins deploying all workloads (Istio, monitoring stack, etc.) automatically.
 
 ```bash
-./run.sh --task addons
+# from the microlab repo
+.ci/create.sh argocd/internal/apps
 ```
 
 ## Project Structure
 
 ```
 microlab-bootstrap/
-├── config.env                               # Cluster versions, IPs, and settings
+├── config.env                               # Cluster versions and settings
 ├── .envrc.example                           # Credentials template (copy to .envrc)
-├── run.sh                                   # Entry point; addons logic lives here
+├── run.sh                                   # Entry point
 ├── tasks/
 │   ├── base.sh                              # System preparation
 │   ├── kubeadm.sh                           # containerd + kubeadm install
@@ -122,12 +116,8 @@ microlab-bootstrap/
 ├── resources/
 │   ├── kubeadm-config.yml.tpl              # kubeadm config template
 │   ├── letsencrypt-cluster-issuer.yml.tpl  # Let's Encrypt ClusterIssuer template
-│   ├── argocd-ingress.yml.tpl              # ArgoCD Ingress template
 │   └── cilium-ippool.yml                   # Cilium IP pools and L2 announcement policy
 └── helm-values/
     ├── cilium.yml.tpl                       # Cilium values template
-    ├── cert-manager.yml                     # cert-manager values
-    ├── traefik-internal.yml.tpl            # Traefik internal values template
-    ├── traefik-external.yml.tpl            # Traefik external values template
-    └── argocd.yml                          # ArgoCD values
+    └── cert-manager.yml                     # cert-manager values
 ```
