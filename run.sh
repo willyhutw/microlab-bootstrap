@@ -102,8 +102,8 @@ for SERVER in "${SERVER_LIST[@]}"; do
     envsubst '$ACME_EMAIL' <"${SCRIPT_DIR}/resources/letsencrypt-cluster-issuer.yml.tpl" | kubectl apply -f -
 
     echo "### Registering cluster '${CLUSTER_NAME}' to ArgoCD ###"
-    argocd login ${ARGOCD_SERVER} --username ${ARGOCD_USERNAME} --password ${ARGOCD_PASSWORD} --insecure --grpc-web
-    KUBECONFIG=${ARGOCD_KUBECONFIG}:$HOME/.kube/${CLUSTER_NAME} argocd cluster add kubernetes-admin@${CLUSTER_NAME} --name ${CLUSTER_NAME} --grpc-web
+    argocd login ${ARGOCD_SERVER} --username ${ARGOCD_USERNAME} --password ${ARGOCD_PASSWORD} --insecure --grpc-web || { echo "!!! ArgoCD login failed — check ARGOCD_SERVER/USERNAME/PASSWORD in .envrc !!!"; exit 1; }
+    KUBECONFIG=${ARGOCD_KUBECONFIG}:$HOME/.kube/${CLUSTER_NAME} argocd cluster add kubernetes-admin@${CLUSTER_NAME} --name ${CLUSTER_NAME} --grpc-web --yes
 
     unset CONTROL_PLANE_ENDPOINT KUBECONFIG
   elif [[ ${TASK,,} == "join" ]]; then
