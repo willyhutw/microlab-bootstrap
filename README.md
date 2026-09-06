@@ -19,11 +19,11 @@ Edit `config.env` with your cluster settings:
 
 ```bash
 export CLUSTER_NAME=micro
-export KUBEADM_VERSION=v1.35
-export K8S_VERSION=v1.35.4
-export SANDBOX_IMAGE=registry.k8s.io/pause:3.10
-export CILIUM_VERSION=1.19.3
-export CERT_MANAGER_VERSION=1.20.2
+export KUBEADM_VERSION=v1.36
+export K8S_VERSION=v1.36.4
+export SANDBOX_IMAGE=registry.k8s.io/pause:3.10.2
+export CILIUM_VERSION=1.19.7
+export CERT_MANAGER_VERSION=v1.20.3
 ```
 
 Copy `.envrc.example` to `.envrc` and fill in your credentials:
@@ -54,7 +54,7 @@ Run tasks in order:
 
 ### 1. Base system setup (all nodes)
 
-Enables cgroup memory (required on aarch64/Raspberry Pi), disables swap (including zram on Raspbian trixie), loads kernel modules (`overlay`, `br_netfilter`), enables IPv4 forwarding, and creates `/mnt/data/{grafana,prometheus,loki}` directories for persistent storage. Auto-reboots each node and waits for it to come back online.
+Enables cgroup memory (required on aarch64/Raspberry Pi), disables swap (including zram on Raspbian trixie), loads kernel modules (`overlay`, `br_netfilter`), enables IPv4 forwarding, and creates `/mnt/data/{grafana,prometheus,loki,open-webui,postgresql}` directories for persistent storage. Auto-reboots each node and waits for it to come back online.
 
 ```bash
 ./run.sh --task base --server 192.168.12.21,192.168.12.31,192.168.12.32 --ssh-user willyhu
@@ -62,7 +62,7 @@ Enables cgroup memory (required on aarch64/Raspberry Pi), disables swap (includi
 
 ### 2. Install kubeadm (all nodes)
 
-Installs containerd (with systemd cgroup), kubeadm, kubelet, and kubectl. Versions are pinned and held via `apt-mark`.
+Installs containerd (with systemd cgroup, and CNI `bin_dir` realigned from Debian's `/usr/lib/cni` default to the ecosystem-standard `/opt/cni/bin`), kubeadm, kubelet, and kubectl. Versions are pinned and held via `apt-mark`.
 
 ```bash
 ./run.sh --task kubeadm --server 192.168.12.21,192.168.12.31,192.168.12.32 --ssh-user willyhu

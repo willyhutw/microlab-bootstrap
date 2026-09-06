@@ -14,6 +14,9 @@ main() {
   containerd config default | sudo tee /etc/containerd/config.toml
   sudo sed -i 's/SystemdCgroup = false/SystemdCgroup = true/' /etc/containerd/config.toml
   sudo sed -i "s|sandbox_image = \".*\"|sandbox_image = \"${SANDBOX_IMAGE}\"|" /etc/containerd/config.toml
+  # Debian's containerd package patches the default CNI bin_dir to /usr/lib/cni;
+  # realign it with the ecosystem default that Cilium/kubeadm expect.
+  sudo sed -i 's|bin_dir = "/usr/lib/cni"|bin_dir = "/opt/cni/bin"|' /etc/containerd/config.toml
   sudo systemctl restart containerd.service
 
   echo "Installing kubeadm ${KUBEADM_VERSION} - ${hostname} - ${arch}"

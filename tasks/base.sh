@@ -47,6 +47,7 @@ create_data_dirs() {
   sudo mkdir -p /mnt/data/prometheus
   sudo mkdir -p /mnt/data/loki
   sudo mkdir -p /mnt/data/open-webui
+  sudo mkdir -p /mnt/data/postgresql
 }
 
 main() {
