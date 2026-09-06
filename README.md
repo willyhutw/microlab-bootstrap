@@ -24,6 +24,11 @@ export K8S_VERSION=v1.36.4
 export SANDBOX_IMAGE=registry.k8s.io/pause:3.10.2
 export CILIUM_VERSION=1.19.7
 export CERT_MANAGER_VERSION=v1.20.3
+
+# Node labels applied automatically by the 'join' task, keyed by --server value
+declare -A NODE_LABELS=(
+  ["192.168.12.33"]="micro/role=monitoring"
+)
 ```
 
 Copy `.envrc.example` to `.envrc` and fill in your credentials:
@@ -86,10 +91,13 @@ Only accepts a single server.
 
 ### 4. Join workers (worker nodes only)
 
-Joins worker nodes to the cluster using the join command saved by step 3.
+Joins worker nodes to the cluster using the join command saved by step 3. After a
+node joins, any labels configured for it in `NODE_LABELS` (keyed by `--server`
+value) are applied with `kubectl label` — e.g. `micro/role=monitoring`, which the
+monitoring stack's local PVs require.
 
 ```bash
-./run.sh --task join --server 192.168.12.31,192.168.12.32 --ssh-user willyhu
+./run.sh --task join --server 192.168.12.31,192.168.12.32,192.168.12.33 --ssh-user willyhu
 ```
 
 ### 5. Apply ArgoCD applications (local machine)

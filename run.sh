@@ -108,6 +108,13 @@ for SERVER in "${SERVER_LIST[@]}"; do
     unset CONTROL_PLANE_ENDPOINT KUBECONFIG
   elif [[ ${TASK,,} == "join" ]]; then
     ssh "$SSH_USER@${SERVER}" "sudo bash -s" <"$HOME/.kube/${CLUSTER_NAME}-join-cmd"
+
+    if [[ -n "${NODE_LABELS[$SERVER]:-}" ]]; then
+      NODE_NAME=$(ssh "$SSH_USER@${SERVER}" "uname -n")
+      echo "### Labeling node '${NODE_NAME}': ${NODE_LABELS[$SERVER]} ###"
+      until KUBECONFIG="$HOME/.kube/${CLUSTER_NAME}" kubectl get node "${NODE_NAME}" &>/dev/null; do sleep 2; done
+      KUBECONFIG="$HOME/.kube/${CLUSTER_NAME}" kubectl label node "${NODE_NAME}" ${NODE_LABELS[$SERVER]} --overwrite
+    fi
   else
     ssh "$SSH_USER@${SERVER}" "bash -s" <"${SCRIPT_DIR}/tasks/${TASK}.sh"
   fi
