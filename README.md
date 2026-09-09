@@ -109,6 +109,20 @@ After workers have joined, apply the ArgoCD `Application` manifests so ArgoCD be
 .ci/create.sh argocd/internal/apps
 ```
 
+### Optional: apply control-plane hardening flags (control plane only)
+
+Re-renders `kubeadm-config.yml`, copies it and `resources/audit-policy.yaml` to
+the control-plane node, and runs `kubeadm init phase control-plane` to regenerate
+the apiserver/controller-manager/scheduler static pod manifests with the CIS
+hardening flags (`profiling=false`, API server audit logging). Also tightens
+kubelet file permissions to `600`. Backs up `/etc/kubernetes/manifests` first;
+the control-plane pods restart as kubelet picks up the new manifests. Only
+accepts a single server.
+
+```bash
+./run.sh --task control-plane-flags --server 192.168.12.21 --ssh-user willyhu
+```
+
 ## Project Structure
 
 ```
@@ -120,9 +134,11 @@ microlab-bootstrap/
 │   ├── base.sh                              # System preparation
 │   ├── kubeadm.sh                           # containerd + kubeadm install
 │   ├── init.sh                              # kubeadm init
+│   ├── control-plane-flags.sh              # CIS hardening: regenerate control-plane manifests
 │   └── join.sh                              # Placeholder (join logic is in run.sh)
 ├── resources/
 │   ├── kubeadm-config.yml.tpl              # kubeadm config template
+│   ├── audit-policy.yaml                   # API server audit policy
 │   ├── letsencrypt-cluster-issuer.yml.tpl  # Let's Encrypt ClusterIssuer template
 │   └── cilium-ippool.yml                   # Cilium IP pools and L2 announcement policy
 └── helm-values/
