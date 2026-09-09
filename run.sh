@@ -75,8 +75,9 @@ for SERVER in "${SERVER_LIST[@]}"; do
     export CONTROL_PLANE_ENDPOINT=${SERVER}
     envsubst '$CLUSTER_NAME $K8S_VERSION $CONTROL_PLANE_ENDPOINT' <"${SCRIPT_DIR}/resources/kubeadm-config.yml.tpl" >"${SCRIPT_DIR}/resources/kubeadm-config.yml"
 
-    echo "### Copying resource 'kubeadm-config.yml' to server '${SERVER}' ###"
+    echo "### Copying resources 'kubeadm-config.yml' and 'audit-policy.yaml' to server '${SERVER}' ###"
     scp "${SCRIPT_DIR}/resources/kubeadm-config.yml" "$SSH_USER@$SERVER:/tmp/"
+    scp "${SCRIPT_DIR}/resources/audit-policy.yaml" "$SSH_USER@$SERVER:/tmp/"
     ssh "$SSH_USER@${SERVER}" "bash -s" <"${SCRIPT_DIR}/tasks/${TASK}.sh"
 
     echo "### Copying join command from server '${SERVER}' ###"

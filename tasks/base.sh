@@ -51,14 +51,18 @@ create_data_dirs() {
 }
 
 kubelet_file_perms() {
-  # CIS 4.1.9 / 4.1.1: kubelet config and systemd unit files must not be
-  # group/world readable. No-op on nodes where kubelet is not yet installed.
+  # CIS 4.1.1 / 4.1.5 / 4.1.6 / 4.1.9: kubelet config, kubeconfig, and systemd
+  # unit files must be root:root and not group/world readable. worker join writes
+  # /etc/kubernetes/kubelet.conf as 644. No-op on nodes where a file is absent.
   local f
   for f in \
     /var/lib/kubelet/config.yaml \
+    /etc/kubernetes/kubelet.conf \
     /etc/systemd/system/kubelet.service.d/10-kubeadm.conf \
     /lib/systemd/system/kubelet.service; do
-    [[ -e "$f" ]] && sudo chmod 600 "$f"
+    [[ -e "$f" ]] || continue
+    sudo chmod 600 "$f"
+    sudo chown root:root "$f"
   done
 }
 
