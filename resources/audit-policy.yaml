@@ -1,0 +1,23 @@
+---
+apiVersion: audit.k8s.io/v1
+kind: Policy
+omitStages:
+  - RequestReceived
+rules:
+  # Do not log health, readiness, liveness, or metrics endpoints.
+  - level: None
+    nonResourceURLs:
+      - /healthz*
+      - /readyz*
+      - /livez*
+      - /metrics
+
+  # Log secret and configmap mutations at full request/response detail.
+  - level: RequestResponse
+    verbs: ["create", "update", "patch", "delete", "deletecollection"]
+    resources:
+      - group: ""
+        resources: ["secrets", "configmaps"]
+
+  # Everything else at metadata level.
+  - level: Metadata

@@ -11,6 +11,7 @@ usage() {
   echo "Example: $0 --task kubeadm --server 192.168.12.21,192.168.12.31,192.168.12.32 --ssh-user willyhu"
   echo "Example: $0 --task init --server 192.168.12.21 --ssh-user willyhu"
   echo "Example: $0 --task join --server 192.168.12.31,192.168.12.32 --ssh-user willyhu"
+  echo "Example: $0 --task control-plane-flags --server 192.168.12.21 --ssh-user willyhu"
   exit 1
 }
 
@@ -54,6 +55,11 @@ fi
 
 if [[ ${TASK,,} == "init" && "$SERVERS" == *","* ]]; then
   echo "!!! Task 'init' only supports a single server !!!"
+  exit 1
+fi
+
+if [[ ${TASK,,} == "control-plane-flags" && "$SERVERS" == *","* ]]; then
+  echo "!!! Task 'control-plane-flags' only supports a single server !!!"
   exit 1
 fi
 
@@ -106,6 +112,17 @@ for SERVER in "${SERVER_LIST[@]}"; do
     KUBECONFIG=${ARGOCD_KUBECONFIG}:$HOME/.kube/${CLUSTER_NAME} argocd cluster add kubernetes-admin@${CLUSTER_NAME} --name ${CLUSTER_NAME} --grpc-web --yes
 
     unset CONTROL_PLANE_ENDPOINT KUBECONFIG
+  elif [[ ${TASK,,} == "control-plane-flags" ]]; then
+    echo "### Rendering 'kubeadm-config.yml.tpl' ###"
+    export CONTROL_PLANE_ENDPOINT=${SERVER}
+    envsubst '$CLUSTER_NAME $K8S_VERSION $CONTROL_PLANE_ENDPOINT' <"${SCRIPT_DIR}/resources/kubeadm-config.yml.tpl" >"${SCRIPT_DIR}/resources/kubeadm-config.yml"
+
+    echo "### Copying resources 'kubeadm-config.yml' and 'audit-policy.yaml' to server '${SERVER}' ###"
+    scp "${SCRIPT_DIR}/resources/kubeadm-config.yml" "$SSH_USER@$SERVER:/tmp/"
+    scp "${SCRIPT_DIR}/resources/audit-policy.yaml" "$SSH_USER@$SERVER:/tmp/"
+    ssh "$SSH_USER@${SERVER}" "bash -s" <"${SCRIPT_DIR}/tasks/${TASK}.sh"
+
+    unset CONTROL_PLANE_ENDPOINT
   elif [[ ${TASK,,} == "join" ]]; then
     ssh "$SSH_USER@${SERVER}" "sudo bash -s" <"$HOME/.kube/${CLUSTER_NAME}-join-cmd"
 

@@ -50,6 +50,18 @@ create_data_dirs() {
   sudo mkdir -p /mnt/data/postgresql
 }
 
+kubelet_file_perms() {
+  # CIS 4.1.9 / 4.1.1: kubelet config and systemd unit files must not be
+  # group/world readable. No-op on nodes where kubelet is not yet installed.
+  local f
+  for f in \
+    /var/lib/kubelet/config.yaml \
+    /etc/systemd/system/kubelet.service.d/10-kubeadm.conf \
+    /lib/systemd/system/kubelet.service; do
+    [[ -e "$f" ]] && sudo chmod 600 "$f"
+  done
+}
+
 main() {
   local hostname=$(uname -n)
   local arch=$(uname -m)
@@ -66,6 +78,7 @@ main() {
   kernel_modules_load
   ipv4_forward_enable
   create_data_dirs
+  kubelet_file_perms
 }
 
 main
