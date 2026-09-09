@@ -19,3 +19,35 @@ networking:
 certificatesDir: /etc/kubernetes/pki
 imageRepository: registry.k8s.io
 clusterName: $CLUSTER_NAME
+apiServer:
+  extraArgs:
+    - name: profiling
+      value: "false"
+    - name: audit-log-path
+      value: /var/log/kubernetes/audit/audit.log
+    - name: audit-log-maxage
+      value: "30"
+    - name: audit-log-maxbackup
+      value: "10"
+    - name: audit-log-maxsize
+      value: "100"
+    - name: audit-policy-file
+      value: /etc/kubernetes/audit/policy.yaml
+  extraVolumes:
+    - name: audit-policy
+      hostPath: /etc/kubernetes/audit
+      mountPath: /etc/kubernetes/audit
+      readOnly: true
+      pathType: DirectoryOrCreate
+    - name: audit-log
+      hostPath: /var/log/kubernetes/audit
+      mountPath: /var/log/kubernetes/audit
+      pathType: DirectoryOrCreate
+controllerManager:
+  extraArgs:
+    - name: profiling
+      value: "false"
+scheduler:
+  extraArgs:
+    - name: profiling
+      value: "false"
