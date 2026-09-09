@@ -75,7 +75,12 @@ Installs containerd (with systemd cgroup, and CNI `bin_dir` realigned from Debia
 
 ### 3. Initialize cluster (control plane only)
 
-Renders `kubeadm-config.yml` from the template and runs `kubeadm init` on the control plane node. Then runs the following entirely from the local machine:
+Renders `kubeadm-config.yml` from the template, copies it and
+`resources/audit-policy.yaml` to the control plane node, and runs `kubeadm init`
+there. The task first creates `/etc/kubernetes/audit` and
+`/var/log/kubernetes/audit` and installs the audit policy to
+`/etc/kubernetes/audit/policy.yaml` (`600`), which the apiserver static pod
+requires. Then runs the following entirely from the local machine:
 
 - Copies kubeconfig to `~/.kube/<CLUSTER_NAME>` and join command to `~/.kube/<CLUSTER_NAME>-join-cmd`
 - Installs Cilium CNI via Helm
@@ -100,6 +105,10 @@ monitoring stack's local PVs require.
 ./run.sh --task join --server 192.168.12.31,192.168.12.32,192.168.12.33 --ssh-user willyhu
 ```
 
+Worker join writes `/etc/kubernetes/kubelet.conf` as `644`. Re-run the `base`
+task on the workers afterwards to tighten it to `600` root:root (CIS 4.1.5/4.1.6);
+`kubelet_file_perms` skips files that are not present, so it is safe to re-run.
+
 ### 5. Apply ArgoCD applications (local machine)
 
 After workers have joined, apply the ArgoCD `Application` manifests so ArgoCD begins deploying all workloads (Istio, monitoring stack, etc.) automatically.
@@ -115,7 +124,8 @@ Re-renders `kubeadm-config.yml`, copies it and `resources/audit-policy.yaml` to
 the control-plane node, and runs `kubeadm init phase control-plane` to regenerate
 the apiserver/controller-manager/scheduler static pod manifests with the CIS
 hardening flags (`profiling=false`, API server audit logging). Also tightens
-kubelet file permissions to `600`. Backs up `/etc/kubernetes/manifests` first;
+kubelet file permissions to `600` (including `/etc/kubernetes/kubelet.conf`,
+CIS 4.1.5/4.1.6). Backs up `/etc/kubernetes/manifests` first;
 the control-plane pods restart as kubelet picks up the new manifests. Only
 accepts a single server.
 
