@@ -19,7 +19,12 @@ main() {
   fi
 
   echo "### Regenerating control-plane static pod manifests ###"
-  sudo kubeadm init phase control-plane --config=/tmp/kubeadm-config.yml
+  # kubeadm v1.36: the bare "control-plane" phase only accepts --rootfs/-v/--vmodule.
+  # The "all" subcommand is required to pass --config and regenerate the manifests.
+  # NOTE: this does not sync the kubeadm-config ConfigMap. A future "kubeadm upgrade
+  # apply" regenerates the manifests from that ConfigMap and will overwrite these
+  # flags, so re-run this task after an upgrade (or sync the ConfigMap beforehand).
+  sudo kubeadm init phase control-plane all --config=/tmp/kubeadm-config.yml
 
   echo "### Tightening kubelet file permissions ###"
   sudo chmod 600 /var/lib/kubelet/config.yaml 2>/dev/null || true
